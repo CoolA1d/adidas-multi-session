@@ -1,4 +1,4 @@
-import sys, logging
+import sys, logging, time
 from utils import find_path
 
 _V = '0.22'
@@ -83,7 +83,7 @@ if __name__ == '__main__':
                 logging.error('[{}/{}] Proxy could not load URL: {}'.format(i + 1, len(proxies), PRODUCT_URL))
 
             logging.info('[{}/{}] Proxy Test Success'.format(i + 1, len(proxies)))
-
+            time.sleep(5)
             faceless_browsers.append({
                 'browser': browser,
                 'user_agent': user_agent,
