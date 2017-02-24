@@ -1,41 +1,26 @@
-import sys, logging, time
+import sys, logging, time, threading
 from utils import find_path
+from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+
+from bot import run
+from utils import import_proxies_from_file, get_user_agent, get_desired_capabilities_phantom
+
 
 _V = '0.22'
-PRODUCT_URL = 'http://www.adidas.com/yeezy'
+PRODUCT_URL = 'http://tools.yzy.io/hmac.html'
 # PRODUCT_URL = 'http://tools.yzy.io/hmac.html'
 
 if sys.version_info <= (3, 0):
     sys.stdout.write("Could not start: requires Python 3.x, not Python 2.x\n")
     sys.exit(1)
 
-if __name__ == '__main__':
-    from selenium import webdriver
-    from selenium.common.exceptions import TimeoutException
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.wait import WebDriverWait
+faceless_browsers = []
 
-    from bot import run
-    from utils import import_proxies_from_file, get_user_agent, get_desired_capabilities_phantom
-
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
-
-    # General output information before start, (tbh need to art ASCII art)
-    print("\nAdidas Multi Session by YZY.io (BETA) (V{})".format(_V))
-
-    # Load proxies
-    proxies = import_proxies_from_file()
-
-    if proxies is None:
-        print("Could not load proxies, make sure you use the proxies.txt file and use the right format.")
-        sys.exit(1)
-
-    print("Proxies loaded: {}".format(len(proxies)))
-
-    # Test proxies and create drivers
-    faceless_browsers = []
-    for i, proxy in enumerate(proxies):
+def check_proxy(i, proxy):
         proxy_auth = proxy[1]
         service_args = [
             '--proxy={}'.format(proxy[0]),
@@ -57,28 +42,28 @@ if __name__ == '__main__':
         # Proxy testing
         try:
             browser.get('http://tools.yzy.io/ip.php')
-            element = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            element = WebDriverWait(browser, 30).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
 
             if not element:
-                logging.error('[{}/{}] Proxy could not load URL: {}'.format(i + 1, len(proxies), 'http://ipecho.net/plain'))
-                continue
+                logging.error('[{}/{}] Proxy could not load URL: {}'.format(i + 1, len(proxies), 'http://tools.yzy.io/ip.php'))
+                return
 
             logging.info('[{}/{}] Proxy using IP: {}'.format(i + 1, len(proxies), element.text))
         except TimeoutException:
             logging.error('[{}/{}] Proxy Time-out: {}'.format(i + 1, len(proxies), proxy))
-            continue
+            return
         except Exception as e:
             logging.error('[{}/{}] {}'.format(i + 1, len(proxies), e))
-            continue
+            return
 
         try:
             browser.get(PRODUCT_URL)
 
             if ('you have been blocked' in browser.page_source.lower()) or ('a security issue was automatically identified' in browser.page_source.lower()):
                 logging.error('[{}/{}] Proxy Banned on {}'.format(i + 1, len(proxies), PRODUCT_URL))
-                continue
+                return
 
-            element = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.TAG_NAME, "div")))
+            element = WebDriverWait(browser, 30).until(EC.presence_of_element_located((By.TAG_NAME, "div")))
             if not element:
                 logging.error('[{}/{}] Proxy could not load URL: {}'.format(i + 1, len(proxies), PRODUCT_URL))
 
@@ -91,10 +76,37 @@ if __name__ == '__main__':
             })
         except TimeoutException:
             logging.error('[{}/{}] Proxy Time-out: {}'.format(i + 1, len(proxies), proxy))
-            continue
+            return
         except Exception as e:
             logging.error('[{}/{}] {}'.format(i + 1, len(proxies), e))
-            continue
+            return
+
+if __name__ == '__main__':
+
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
+
+    # General output information before start, (tbh need to art ASCII art)
+    print("\nAdidas Multi Session by YZY.io (BETA) (V{})".format(_V))
+
+    # Load proxies
+    proxies = import_proxies_from_file()
+
+    if proxies is None:
+        print("Could not load proxies, make sure you use the proxies.txt file and use the right format.")
+        sys.exit(1)
+
+    print("Proxies loaded: {}".format(len(proxies)))
+
+    # Test proxies and create drivers
+    threadList = []
+    for i, proxy in enumerate(proxies):
+
+        test = threading.Thread(target=check_proxy, kwargs={'i': i, 'proxy': proxy}).start()
+        threadList.append(test)
+        
+    
+    while (threading.activeCount() > 1):
+        pass
 
     if len(faceless_browsers) > 0:
         print("\nWorking proxies: {} - starting script..".format(len(faceless_browsers)))
