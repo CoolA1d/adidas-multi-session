@@ -1,4 +1,4 @@
-import sys, logging, time, threading
+import sys, logging, time, threading, random
 from utils import find_path
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
@@ -11,8 +11,9 @@ from utils import import_proxies_from_file, get_user_agent, get_desired_capabili
 
 
 _V = '0.22'
-PRODUCT_URL = 'http://tools.yzy.io/hmac.html'
+PRODUCT_URL = 'http://www.adidas.com/yeezy'
 # PRODUCT_URL = 'http://tools.yzy.io/hmac.html'
+THREAD_COUNT = 1 # int(input('How many threads to allow for proxy checking? (Recommend 1 for adidas): '))
 
 if sys.version_info <= (3, 0):
     sys.stdout.write("Could not start: requires Python 3.x, not Python 2.x\n")
@@ -27,7 +28,7 @@ def check_proxy(i, proxy):
             '--proxy-type=http',
             '--ignore-ssl-errors=true'
         ]
-
+        
         if proxy_auth:
             service_args.append('--proxy-auth={}'.format(proxy_auth))
 
@@ -98,16 +99,17 @@ if __name__ == '__main__':
     print("Proxies loaded: {}".format(len(proxies)))
 
     # Test proxies and create drivers
-    threadList = []
-    for i, proxy in enumerate(proxies):
-
-        test = threading.Thread(target=check_proxy, kwargs={'i': i, 'proxy': proxy}).start()
-        threadList.append(test)
-        
     
+    for i, proxy in enumerate(proxies):
+        
+        threading.Thread(target=check_proxy, kwargs={'i': i, 'proxy': proxy}).start()
+        while (threading.activeCount() > THREAD_COUNT):
+           pass
+        time.sleep(random.randint(5, 10))
+
     while (threading.activeCount() > 1):
         pass
-
+    
     if len(faceless_browsers) > 0:
         print("\nWorking proxies: {} - starting script..".format(len(faceless_browsers)))
 

@@ -13,7 +13,6 @@ from utils import write_cookies_to_file, find_path
 
 opened_sessions = []
 
-
 def transfer_session(browser):
     driver = browser['browser']
     logging.info("[New Thread] Transferring session {}".format(driver.session_id))
@@ -32,7 +31,7 @@ def transfer_session(browser):
     chrome.get(url)
     logging.info("[CHROME/PROXY] Login with {}".format(browser['proxy'][1]))
 
-    chrome.implicitly_wait(10)
+    chrome.implicitly_wait(30)
     element = WebDriverWait(chrome, 1000).until(EC.presence_of_element_located((By.TAG_NAME, "div")))
 
     # Transfer Cookies
@@ -56,11 +55,11 @@ def start_session(url, browser):
 
             tries = 0
             while tries < 5:
-                # Check for captcha field
+                # Check for captcha field or size select
                 try:
                     captcha = "captcha-container clearfix" in browser['browser'].page_source.lower()
-
-                    if captcha:
+                    sizeSelect = "Select size" in browser['browser'].page_source
+                    if captcha or sizeSelect:
                         opened_sessions.append(browser['browser'])
                         threading.Thread(target=transfer_session, kwargs={'browser': browser}).start()
                         return False
